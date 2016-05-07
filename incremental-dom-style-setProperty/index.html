@@ -1,0 +1,94 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+            var attached = document.createElement('div');
+            var detached = document.createElement('div');
+            document.body.appendChild(attached);
+
+            var attachedStyle = attached.style;
+            var detachedStyle = detached.style;
+
+            var value = 'white';
+            // add tests
+
+            function sparhami(style, prop, value) {
+                if (prop.indexOf('-') >= 0) {
+                    style.setProperty(prop, value);
+                } else {
+                    style[prop] = value;
+                }
+            }
+
+            function jridgewell(style, prop, value) {
+                style.setProperty(prop, value);
+            }
+
+            var tests = [
+                '--var-test-ing',
+                'background-color',
+                'background'
+            ];
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            var promise = Promise.resolve();
+
+            tests.forEach(function(prop) {
+                promise = promise.then(function() {
+                    var tests = {};
+                    tests['sparhami (attached, ' + prop + ')'] = function() {
+                        sparhami(attachedStyle, prop, value);
+                    };
+                    tests['jridgewell (attached, ' + prop + ')'] = function() {
+                        jridgewell(attachedStyle, prop, value);
+                    };
+                    return test(tests);
+                }).then(function() {
+                    var tests = {};
+                    tests['sparhami (detached, ' + prop + ')'] = function() {
+                        sparhami(detachedStyle, prop, value);
+                    };
+                    tests['jridgewell (detached, ' + prop + ')'] = function() {
+                        jridgewell(detachedStyle, prop, value);
+                    };
+                    return test(tests);
+                });
+            });
+
+            promise.then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
