@@ -1,0 +1,311 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+            var node = document.createElement('div');
+
+            function sparhami(attrsArr, newAttrs, c) {
+                /*
+                 * Checks to see if one or more attributes have changed for a given Element.
+                 * When no attributes have changed, this is much faster than checking each
+                 * individual argument. When attributes have changed, the overhead of this is
+                 * minimal.
+                 */
+                var attrsChanged = false;
+                var i = 3;
+                var j = 0;
+
+                for (; i < arguments.length; i += 1, j += 1) {
+                    if (attrsArr[j] !== arguments[i]) {
+                        attrsChanged = true;
+                        break;
+                    }
+                }
+
+                for (; i < arguments.length; i += 1, j += 1) {
+                    attrsArr[j] = arguments[i];
+                }
+
+                if (j < attrsArr.length) {
+                    attrsChanged = true;
+                    attrsArr.length = j;
+                }
+
+                /*
+                 * Actually perform the attribute update.
+                 */
+                if (attrsChanged) {
+                    for (i = 3; i < arguments.length; i += 2) {
+                        newAttrs[arguments[i]] = arguments[i + 1];
+                    }
+
+                    for (var attr in newAttrs) {
+                        node.setAttribute(attr, newAttrs[attr]);
+                        newAttrs[attr] = undefined;
+                    }
+                }
+
+                return node;
+            }
+
+            function jridgewell(attrsArr, newAttrs, c, array) {
+                /*
+                 * Checks to see if one or more attributes have changed for a given Element.
+                 * When no attributes have changed, this is much faster than checking each
+                 * individual argument. When attributes have changed, the overhead of this is
+                 * minimal.
+                 */
+                var attrsChanged = false;
+                var i = 3;
+                var j = 0;
+
+                for (; i < arguments.length; i += 1, j += 1) {
+                    if (attrsArr[j] !== arguments[i]) {
+                        attrsChanged = true;
+                        break;
+                    }
+                }
+
+                for (; i < arguments.length; i += 1, j += 1) {
+                    attrsArr[j] = arguments[i];
+                }
+
+                if (j < attrsArr.length) {
+                    attrsChanged = true;
+                    attrsArr.length = j;
+                }
+
+                /*
+                 * Actually perform the attribute update.
+                 */
+                if (attrsChanged) {
+                    for (i = 0; i < attrsArr.length; i += 2) {
+                        newAttrs[attrsArr[i]] = attrsArr[i + 1];
+                    }
+
+                    for (var attr in newAttrs) {
+                        node.setAttribute(attr, newAttrs[attr]);
+                        newAttrs[attr] = undefined;
+                    }
+                }
+
+                return node;
+            }
+
+            function argLoop(array) {
+                // Control
+                var i = 1, j = 0;
+                for (; i < arguments.length; i++, j++) {
+                    array[j] = arguments[i];
+                }
+
+                // Test
+                var count = 0;
+                for (i = 1; i < arguments.length; i++) {
+                    count += arguments[i];
+                }
+                return count;
+            }
+
+            function arrayLoop(array) {
+                // Control
+                var i = 1, j = 0;
+                for (; i < arguments.length; i++, j++) {
+                    array[j] = arguments[i];
+                }
+
+                // Test
+                var count = 0;
+                for (i = 0; i < array.length; i++) {
+                    count += array[i];
+                }
+                return count;
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            var promise = Promise.resolve()
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                var sparAttrsArr = [];
+                var sparNewAttrs = {};
+                tests['sparhami (short, change at start)'] = function() {
+                    sparhami(
+                        sparAttrsArr,
+                        sparNewAttrs,
+                        0, 'a' + (s % 2), 'a' + (s % 2), 'b', 'b', 'c', 'c'
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                var jridAttrsArr = [];
+                var jridNewAttrs = {};
+                tests['jridgewell (short, change at start)'] = function() {
+                    jridgewell(
+                        jridAttrsArr,
+                        jridNewAttrs,
+                        0, 'a' + (j % 2), 'a' + (j % 2), 'b', 'b', 'c', 'c'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                var sparAttrsArr = [];
+                var sparNewAttrs = {};
+                tests['sparhami (short, change at end)'] = function() {
+                    sparhami(
+                        sparAttrsArr,
+                        sparNewAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c' + (s % 2), 'c' + (s % 2)
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                var jridAttrsArr = [];
+                var jridNewAttrs = {};
+                tests['jridgewell (short, change at end)'] = function() {
+                    jridgewell(
+                        jridAttrsArr,
+                        jridNewAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c' + (j % 2), 'c' + (j % 2)
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                var sparAttrsArr = [];
+                var sparNewAttrs = {};
+                tests['sparhami (long, change at start)'] = function() {
+                    sparhami(
+                        sparAttrsArr,
+                        sparNewAttrs,
+                        0, 'a' + (s % 2), 'a' + (s % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                var jridAttrsArr = [];
+                var jridNewAttrs = {};
+                tests['jridgewell (long, change at start)'] = function() {
+                    jridgewell(
+                        jridAttrsArr,
+                        jridNewAttrs,
+                        0, 'a' + (j % 2), 'a' + (j % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                var sparAttrsArr = [];
+                var sparNewAttrs = {};
+                tests['sparhami (long, change at end)'] = function() {
+                    sparhami(
+                        sparAttrsArr,
+                        sparNewAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j' + (s % 2), 'j' + (s % 2)
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                var jridAttrsArr = [];
+                var jridNewAttrs = {};
+                tests['jridgewell (long, change at end)'] = function() {
+                    jridgewell(
+                        jridAttrsArr,
+                        jridNewAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j' + (j % 2), 'j' + (j % 2)
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var array = [];
+                tests['arguments loop (short)'] = function() {
+                    argLoop(array, 0, 1, 2, 3, 4, 5);
+                };
+
+                tests['array loop (short)'] = function() {
+                    arrayLoop(array, 0, 1, 2, 3, 4, 5);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var array = [];
+                tests['arguments loop (long)'] = function() {
+                    argLoop(array, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19);
+                };
+
+                tests['jridgewell (long)'] = function() {
+                    arrayLoop(array, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19);
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
