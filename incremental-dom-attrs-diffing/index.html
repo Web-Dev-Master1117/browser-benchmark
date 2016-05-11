@@ -1,0 +1,395 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+            var node = document.createElement('div');
+            var attrsArr = [];
+            var newAttrs = Object.create(null);
+
+            function sparhami(attrsArr, newAttrs, c) {
+                /*
+                 * Checks to see if one or more attributes have changed for a given Element.
+                 * When no attributes have changed, this is much faster than checking each
+                 * individual argument. When attributes have changed, the overhead of this is
+                 * minimal.
+                 */
+                var attrsChanged = false;
+                var i = 3;
+                var j = 0;
+
+                for (; i < arguments.length; i += 1, j += 1) {
+                    if (attrsArr[j] !== arguments[i]) {
+                        attrsChanged = true;
+                        break;
+                    }
+                }
+
+                for (; i < arguments.length; i += 1, j += 1) {
+                    attrsArr[j] = arguments[i];
+                }
+
+                if (j < attrsArr.length) {
+                    attrsChanged = true;
+                    attrsArr.length = j;
+                }
+
+                /*
+                 * Actually perform the attribute update.
+                 */
+                if (attrsChanged) {
+                    for (i = 0; i < attrsArr.length; i += 2) {
+                        newAttrs[attrsArr[i]] = attrsArr[i + 1];
+                    }
+
+                    for (var attr in newAttrs) {
+                        node.setAttribute(attr, newAttrs[attr]);
+                        newAttrs[attr] = undefined;
+                    }
+                }
+
+                return node;
+            }
+
+            var sentinel = Object.create(null);
+            function jridgewell(attrsArr, newAttrs, c) {
+                /*
+                 * Checks to see if one or more attributes have changed for a given Element.
+                 * When no attributes have changed, this is much faster than checking each
+                 * individual argument. When attributes have changed, the overhead of this is
+                 * minimal.
+                 */
+                var i = 3;
+                var j = 0;
+
+                for (; i < arguments.length; i += 1, j += 1) {
+                    if (attrsArr[j] !== arguments[i]) {
+                        break;
+                    }
+                }
+
+                // If we have looped to the end of the attribute pairs in arguments (implied
+                // by attrsChanged being false) but our known cached attrsArr is longer, then
+                // we'll need to setup newAttrs with the attributes for this pass. So send it
+                // down the attrsChanged path. If we didn't make it to the end, then this'll
+                // make no difference since attrsChanged is already true.
+                if (i < arguments.length || j < attrsArr.length) {
+                    var possibleRemovals = attrsArr.length > j + 1;
+                    var removals = false;
+                    i -= ~i & 1;
+                    j = j & ~1;
+
+                    for (; i < arguments.length; i += 2, j += 2) {
+                        var attr = arguments[i];
+                        var value = arguments[i + 1];
+                        var expectedAttr = attrsArr[j];
+
+                        if (attr === expectedAttr) {
+                            var expectedValue = attrsArr[j + 1];
+                            if (value === expectedValue) {
+                                continue;
+                            }
+                            node.setAttribute(attr, value);
+                        } else if (possibleRemovals) {
+                            removals = true;
+                            newAttrs[attr] = value;
+                            var malue = newAttrs[expectedAttr];
+                            if (malue === undefined || malue === sentinel) {
+                                newAttrs[expectedAttr] = undefined;
+                            }
+                        } else {
+                            node.setAttribute(attr, value);
+                        }
+
+                        attrsArr[j] = attr;
+                        attrsArr[j + 1] = value;
+                    }
+
+                    if (j < attrsArr.length) {
+                        for (var k = j; k < attrsArr.length; k += 2) {
+                            var rattr = attrsArr[k];
+                            var ralue = newAttrs[rattr];
+                            if (ralue === undefined || ralue === sentinel) {
+                                newAttrs[rattr] = undefined;
+                            }
+                        }
+                        removals = true;
+                        attrsArr.length = j;
+                    }
+
+                    if (removals) {
+                        for (var nattr in newAttrs) {
+                            var nalue = newAttrs[nattr];
+                            if (nalue !== sentinel) {
+                                node.setAttribute(nattr, nalue);
+                                newAttrs[nattr] = sentinel;
+                            }
+                        }
+                    }
+                }
+
+                return node;
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t], {
+                            setup: function() {
+                                node = document.createElement('div');
+                                attrsArr = [];
+                                newAttrs = Object.create(null);
+                            }
+                        });
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            var promise = Promise.resolve()
+            .then(function() {
+                var tests = {};
+
+                tests['sparhami (new element)'] = function() {
+                    sparhami(
+                        [],
+                        Object.create(null),
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                };
+
+                tests['jridgewell (new element)'] = function() {
+                    jridgewell(
+                        [],
+                        Object.create(null),
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                tests['sparhami (no changes)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                };
+
+                tests['jridgewell (no changes)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                tests['sparhami (short, change at start)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a' + (s % 2), 'b', 'b', 'c', 'c'
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (short, change at start)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a' + (j % 2), 'b', 'b', 'c', 'c'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                tests['sparhami (short, change at end)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c' + (s % 2)
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (short, change at end)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c' + (j % 2)
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                tests['sparhami (long, change at start)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a' + (s % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (long, change at start)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a' + (j % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                tests['sparhami (change at end)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j' + (s % 2)
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (change at end)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j' + (j % 2)
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                tests['sparhami (changed name at start)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a' + (s % 2), 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (changed name at start)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a' + (j % 2), 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var s = 0;
+                tests['sparhami (changed name at end)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e' + (s % 2), 'e'
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (changed name at end)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e' + (j % 2), 'e'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var str = 'abcde';
+                var s = 0;
+                tests['sparhami (shift attributes)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, str.charAt((s + 0) % 5), 'a', str.charAt((s + 1) % 5), 'b', str.charAt((s + 2) % 5), 'c', str.charAt((s + 3) % 5), 'd', str.charAt((s + 4) % 5), 'e'
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (changed name at end)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, str.charAt(j % 5), 'a', str.charAt(j % 5), 'b', str.charAt(j % 5), 'c', str.charAt(j % 5), 'd', str.charAt(j % 5), 'e'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
