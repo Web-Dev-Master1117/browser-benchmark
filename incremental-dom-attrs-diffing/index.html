@@ -291,7 +291,7 @@
                 var tests = {};
 
                 var s = 0;
-                tests['sparhami (change at end)'] = function() {
+                tests['sparhami (long, change at end)'] = function() {
                     sparhami(
                         attrsArr,
                         newAttrs,
@@ -301,7 +301,7 @@
                 };
 
                 var j = 0;
-                tests['jridgewell (change at end)'] = function() {
+                tests['jridgewell (long, change at end)'] = function() {
                     jridgewell(
                         attrsArr,
                         newAttrs,
@@ -374,11 +374,36 @@
                 };
 
                 var j = 0;
-                tests['jridgewell (changed name at end)'] = function() {
+                tests['jridgewell (shift attributes)'] = function() {
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, str.charAt(j % 5), 'a', str.charAt(j % 5), 'b', str.charAt(j % 5), 'c', str.charAt(j % 5), 'd', str.charAt(j % 5), 'e'
+                        0, str.charAt((j + 0) % 5), 'a', str.charAt((j + 1) % 5), 'b', str.charAt((j + 2) % 5), 'c', str.charAt((j + 3) % 5), 'd', str.charAt((j + 4) % 5), 'e'
+                    );
+                    j++;
+                };
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+
+                var str = 'abcde';
+                var s = 0;
+                tests['sparhami (shift and change attributes)'] = function() {
+                    sparhami(
+                        attrsArr,
+                        newAttrs,
+                        0, str.charAt((s + 0) % 5), str.charAt((s + 0) % 5), str.charAt((s + 1) % 5), str.charAt((s + 1) % 5), str.charAt((s + 2) % 5), str.charAt((s + 2) % 5), str.charAt((s + 3) % 5), str.charAt((s + 3) % 5), str.charAt((s + 4) % 5), str.charAt((s + 4) % 5)
+                    );
+                    s++;
+                };
+
+                var j = 0;
+                tests['jridgewell (shift and change attributes)'] = function() {
+                    jridgewell(
+                        attrsArr,
+                        newAttrs,
+                        0, str.charAt((j + 0) % 5), str.charAt((j + 0) % 5), str.charAt((j + 1) % 5), str.charAt((j + 1) % 5), str.charAt((j + 2) % 5), str.charAt((j + 2) % 5), str.charAt((j + 3) % 5), str.charAt((j + 3) % 5), str.charAt((j + 4) % 5), str.charAt((j + 4) % 5)
                     );
                     j++;
                 };
