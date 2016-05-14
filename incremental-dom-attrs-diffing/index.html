@@ -10,8 +10,9 @@
             var node = document.createElement('div');
             var attrsArr = [];
             var newAttrs = Object.create(null);
+            var attrsCache = Object.create(null);
 
-            function sparhami(attrsArr, newAttrs, c) {
+            function sparhami(attrsArr, newAttrs, attrsCache) {
                 /*
                  * Checks to see if one or more attributes have changed for a given Element.
                  * When no attributes have changed, this is much faster than checking each
@@ -47,8 +48,12 @@
                     }
 
                     for (var attr in newAttrs) {
-                        node.setAttribute(attr, newAttrs[attr]);
-                        newAttrs[attr] = undefined;
+                        var value = newAttrs[attr];
+                        if (attrsCache[attr] !== value) {
+                            node.setAttribute(attr, newAttrs[attr]);
+                            attrsCache[attr] = value;
+                            newAttrs[attr] = undefined;
+                        }
                     }
                 }
 
@@ -144,6 +149,7 @@
                                 node = document.createElement('div');
                                 attrsArr = [];
                                 newAttrs = Object.create(null);
+                                attrsCache = Object.create(null);
                             }
                         });
                     }
@@ -202,7 +208,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
                     );
                 };
 
@@ -210,7 +217,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
                     );
                 };
                 return test(tests);
@@ -223,7 +231,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a' + (s % 2), 'b', 'b', 'c', 'c'
+                        attrsCache,
+                        'a', 'a' + (s % 2), 'b', 'b', 'c', 'c'
                     );
                     s++;
                 };
@@ -233,7 +242,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a' + (j % 2), 'b', 'b', 'c', 'c'
+                        attrsCache,
+                        'a', 'a' + (j % 2), 'b', 'b', 'c', 'c'
                     );
                     j++;
                 };
@@ -247,7 +257,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c' + (s % 2)
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c' + (s % 2)
                     );
                     s++;
                 };
@@ -257,7 +268,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c' + (j % 2)
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c' + (j % 2)
                     );
                     j++;
                 };
@@ -271,7 +283,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a' + (s % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
+                        attrsCache,
+                        'a', 'a' + (s % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
                     );
                     s++;
                 };
@@ -281,7 +294,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a' + (j % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
+                        attrsCache,
+                        'a', 'a' + (j % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
                     );
                     j++;
                 };
@@ -295,7 +309,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j' + (s % 2)
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j' + (s % 2)
                     );
                     s++;
                 };
@@ -305,7 +320,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j' + (j % 2)
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j' + (j % 2)
                     );
                     j++;
                 };
@@ -319,7 +335,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, 'a' + (s % 2), 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                        attrsCache,
+                        'a' + (s % 2), 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
                     );
                     s++;
                 };
@@ -329,7 +346,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, 'a' + (j % 2), 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                        attrsCache,
+                        'a' + (j % 2), 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
                     );
                     j++;
                 };
@@ -343,7 +361,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e' + (s % 2), 'e'
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e' + (s % 2), 'e'
                     );
                     s++;
                 };
@@ -353,7 +372,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e' + (j % 2), 'e'
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e' + (j % 2), 'e'
                     );
                     j++;
                 };
@@ -368,7 +388,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, str.charAt((s + 0) % 5), 'a', str.charAt((s + 1) % 5), 'b', str.charAt((s + 2) % 5), 'c', str.charAt((s + 3) % 5), 'd', str.charAt((s + 4) % 5), 'e'
+                        attrsCache,
+                        str.charAt((s + 0) % 5), 'a', str.charAt((s + 1) % 5), 'b', str.charAt((s + 2) % 5), 'c', str.charAt((s + 3) % 5), 'd', str.charAt((s + 4) % 5), 'e'
                     );
                     s++;
                 };
@@ -378,7 +399,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, str.charAt((j + 0) % 5), 'a', str.charAt((j + 1) % 5), 'b', str.charAt((j + 2) % 5), 'c', str.charAt((j + 3) % 5), 'd', str.charAt((j + 4) % 5), 'e'
+                        attrsCache,
+                        str.charAt((j + 0) % 5), 'a', str.charAt((j + 1) % 5), 'b', str.charAt((j + 2) % 5), 'c', str.charAt((j + 3) % 5), 'd', str.charAt((j + 4) % 5), 'e'
                     );
                     j++;
                 };
@@ -393,7 +415,8 @@
                     sparhami(
                         attrsArr,
                         newAttrs,
-                        0, str.charAt((s + 0) % 5), str.charAt((s + 0) % 5), str.charAt((s + 1) % 5), str.charAt((s + 1) % 5), str.charAt((s + 2) % 5), str.charAt((s + 2) % 5), str.charAt((s + 3) % 5), str.charAt((s + 3) % 5), str.charAt((s + 4) % 5), str.charAt((s + 4) % 5)
+                        attrsCache,
+                        str.charAt((s + 0) % 5), str.charAt((s + 0) % 5), str.charAt((s + 1) % 5), str.charAt((s + 1) % 5), str.charAt((s + 2) % 5), str.charAt((s + 2) % 5), str.charAt((s + 3) % 5), str.charAt((s + 3) % 5), str.charAt((s + 4) % 5), str.charAt((s + 4) % 5)
                     );
                     s++;
                 };
@@ -403,7 +426,8 @@
                     jridgewell(
                         attrsArr,
                         newAttrs,
-                        0, str.charAt((j + 0) % 5), str.charAt((j + 0) % 5), str.charAt((j + 1) % 5), str.charAt((j + 1) % 5), str.charAt((j + 2) % 5), str.charAt((j + 2) % 5), str.charAt((j + 3) % 5), str.charAt((j + 3) % 5), str.charAt((j + 4) % 5), str.charAt((j + 4) % 5)
+                        attrsCache,
+                        str.charAt((j + 0) % 5), str.charAt((j + 0) % 5), str.charAt((j + 1) % 5), str.charAt((j + 1) % 5), str.charAt((j + 2) % 5), str.charAt((j + 2) % 5), str.charAt((j + 3) % 5), str.charAt((j + 3) % 5), str.charAt((j + 4) % 5), str.charAt((j + 4) % 5)
                     );
                     j++;
                 };
