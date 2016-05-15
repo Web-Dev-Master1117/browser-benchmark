@@ -12,7 +12,7 @@
             var newAttrs = Object.create(null);
             var attrsCache = Object.create(null);
 
-            function sparhami(attrsArr, newAttrs, attrsCache) {
+            function reference(attrsArr, newAttrs, attrsCache) {
                 /*
                  * Checks to see if one or more attributes have changed for a given Element.
                  * When no attributes have changed, this is much faster than checking each
@@ -50,7 +50,51 @@
                     for (var attr in newAttrs) {
                         var value = newAttrs[attr];
                         if (attrsCache[attr] !== value) {
-                            node.setAttribute(attr, newAttrs[attr]);
+                            node.setAttribute(attr, value);
+                            attrsCache[attr] = value;
+                            newAttrs[attr] = undefined;
+                        }
+                    }
+                }
+
+                return node;
+            }
+
+            function sparhami(attrsArr, newAttrs, attrsCache) {
+                var i = 3;
+                var j = 0;
+
+                for (; i < arguments.length; i += 2, j += 2) {
+                    var nattr = arguments[i];
+                    if (attrsArr[j] !== nattr) {
+                        break;
+                    }
+
+                    var nalue = arguments[i + 1];
+                    if (attrsArr[j + 1] !== nalue) {
+                        attrsArr[j + 1] = nalue;
+                        attrsCache[nattr] = nalue;
+                        node.setAttribute(nattr, nalue);
+                    }
+                }
+
+                if (i < arguments.length || j < attrsArr.length) {
+                    for (; i < arguments.length; i += 1, j += 1) {
+                        attrsArr[j] = arguments[i];
+                    }
+
+                    if (j < attrsArr.length) {
+                        attrsArr.length = j;
+                    }
+
+                    for (i = 0; i < attrsArr.length; i += 2) {
+                        newAttrs[attrsArr[i]] = attrsArr[i + 1];
+                    }
+
+                    for (var attr in newAttrs) {
+                        var value = newAttrs[attr];
+                        if (attrsCache[attr] !== value) {
+                            node.setAttribute(attr, value);
                             attrsCache[attr] = value;
                             newAttrs[attr] = undefined;
                         }
@@ -62,12 +106,6 @@
 
             var sentinel = Object.create(null);
             function jridgewell(attrsArr, newAttrs, c) {
-                /*
-                 * Checks to see if one or more attributes have changed for a given Element.
-                 * When no attributes have changed, this is much faster than checking each
-                 * individual argument. When attributes have changed, the overhead of this is
-                 * minimal.
-                 */
                 var i = 3;
                 var j = 0;
 
@@ -140,6 +178,13 @@
                 return node;
             }
 
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
             function test(tests) {
                 return new Promise(function(resolve) {
                     var suite = new Benchmark.Suite();
@@ -148,6 +193,7 @@
                             setup: function() {
                                 node = document.createElement('div');
                                 attrsArr = [];
+                                attrsDiff = [];
                                 newAttrs = Object.create(null);
                                 attrsCache = Object.create(null);
                             }
@@ -161,18 +207,22 @@
                         var p = document.createElement('p');
                         p.appendChild(document.createTextNode(event.target));
                         document.body.appendChild(p);
+                        scrollToBottom();
                     })
                     .on('error', function(event) {
                         var p = document.createElement('p');
                         p.style.background = 'red';
                         p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
                         document.body.appendChild(p);
+                        scrollToBottom();
                     })
                     .on('complete', function() {
                         var p = document.createElement('p');
                         p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
                         document.body.appendChild(p);
                         document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
                         resolve();
                     })
                     // run async
@@ -184,11 +234,21 @@
             .then(function() {
                 var tests = {};
 
+                tests['reference (new element)'] = function() {
+                    reference(
+                        [],
+                        Object.create(null),
+                        Object.create(null),
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                };
+
                 tests['sparhami (new element)'] = function() {
                     sparhami(
                         [],
                         Object.create(null),
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                        Object.create(null),
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
                     );
                 };
 
@@ -196,13 +256,23 @@
                     jridgewell(
                         [],
                         Object.create(null),
-                        0, 'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                        Object.create(null),
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
                     );
                 };
                 return test(tests);
             })
             .then(function() {
                 var tests = {};
+
+                tests['reference (no changes)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                };
 
                 tests['sparhami (no changes)'] = function() {
                     sparhami(
@@ -225,6 +295,17 @@
             })
             .then(function() {
                 var tests = {};
+
+                var r = 0;
+                tests['reference (short, change at start)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        'a', 'a' + (r % 2), 'b', 'b', 'c', 'c'
+                    );
+                    r++;
+                };
 
                 var s = 0;
                 tests['sparhami (short, change at start)'] = function() {
@@ -252,6 +333,17 @@
             .then(function() {
                 var tests = {};
 
+                var r = 0;
+                tests['reference (short, change at end)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c' + (r % 2)
+                    );
+                    r++;
+                };
+
                 var s = 0;
                 tests['sparhami (short, change at end)'] = function() {
                     sparhami(
@@ -277,6 +369,17 @@
             })
             .then(function() {
                 var tests = {};
+
+                var r = 0;
+                tests['reference (long, change at start)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        'a', 'a' + (r % 2), 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j'
+                    );
+                    r++;
+                };
 
                 var s = 0;
                 tests['sparhami (long, change at start)'] = function() {
@@ -304,6 +407,17 @@
             .then(function() {
                 var tests = {};
 
+                var r = 0;
+                tests['reference (long, change at end)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'h', 'h', 'i', 'i', 'j', 'j' + (r % 2)
+                    );
+                    r++;
+                };
+
                 var s = 0;
                 tests['sparhami (long, change at end)'] = function() {
                     sparhami(
@@ -330,6 +444,17 @@
             .then(function() {
                 var tests = {};
 
+                var r = 0;
+                tests['reference (changed name at start)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        'a' + (r % 2), 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e'
+                    );
+                    r++;
+                };
+
                 var s = 0;
                 tests['sparhami (changed name at start)'] = function() {
                     sparhami(
@@ -355,6 +480,17 @@
             })
             .then(function() {
                 var tests = {};
+
+                var r = 0;
+                tests['reference (changed name at end)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        'a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e' + (r % 2), 'e'
+                    );
+                    r++;
+                };
 
                 var s = 0;
                 tests['sparhami (changed name at end)'] = function() {
@@ -383,6 +519,17 @@
                 var tests = {};
 
                 var str = 'abcde';
+                var r = 0;
+                tests['reference (shift attributes)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        str.charAt((r + 0) % 5), 'a', str.charAt((r + 1) % 5), 'b', str.charAt((r + 2) % 5), 'c', str.charAt((r + 3) % 5), 'd', str.charAt((r + 4) % 5), 'e'
+                    );
+                    r++;
+                };
+
                 var s = 0;
                 tests['sparhami (shift attributes)'] = function() {
                     sparhami(
@@ -410,6 +557,17 @@
                 var tests = {};
 
                 var str = 'abcde';
+                var r = 0;
+                tests['reference (shift and change attributes)'] = function() {
+                    reference(
+                        attrsArr,
+                        newAttrs,
+                        attrsCache,
+                        str.charAt((r + 0) % 5), str.charAt((r + 0) % 5), str.charAt((r + 1) % 5), str.charAt((r + 1) % 5), str.charAt((r + 2) % 5), str.charAt((r + 2) % 5), str.charAt((r + 3) % 5), str.charAt((r + 3) % 5), str.charAt((r + 4) % 5), str.charAt((r + 4) % 5)
+                    );
+                    r++;
+                };
+
                 var s = 0;
                 tests['sparhami (shift and change attributes)'] = function() {
                     sparhami(
