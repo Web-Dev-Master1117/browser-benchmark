@@ -1,0 +1,124 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    if (window.kill) {
+                        return resolve();
+                    }
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            function Blank() {}
+            Blank.prototype = Object.create(null);
+
+            var promise = Promise.resolve()
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                tests['Object.create'] = function() {
+                    var o = Object.create(null);
+                };
+
+                tests['new Blank'] = function() {
+                    var o = new Blank();
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+                function Blank() {}
+                Blank.prototype = Object.create(null);
+
+                var o = Object.create(null);
+                var b = new Blank();
+                o.test = 'test';
+                b.test = 'test';
+
+                tests['Get (Object.create, exists)'] = function() {
+                    return o.test;
+                };
+
+                tests['Get (new Blank, exists)'] = function() {
+                    return b.test;
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+                function Blank() {}
+                Blank.prototype = Object.create(null);
+
+                var o = Object.create(null);
+                var b = new Blank();
+
+                tests['Get (Object.create, non-existent)'] = function() {
+                    return o.test;
+                };
+
+                tests['Get (new Blank, non-existent)'] = function() {
+                    return b.test;
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
