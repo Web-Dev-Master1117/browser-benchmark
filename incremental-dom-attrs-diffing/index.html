@@ -104,73 +104,47 @@
                 return node;
             }
 
-            var sentinel = Object.create(null);
-            function jridgewell(attrsArr, newAttrs, c) {
+            function jridgewell(attrsArr, newAttrs, attrsCache) {
                 var i = 3;
                 var j = 0;
+                var isNew = attrsArr.length === 0;
 
-                for (; i < arguments.length; i += 1, j += 1) {
-                    if (attrsArr[j] !== arguments[i]) {
+                for (; i < arguments.length; i += 2, j += 2) {
+                    var nattr = arguments[i];
+                    if (isNew) {
+                        attrsArr[j] = nattr;
+                        newAttrs[nattr] = undefined;
+                    } else if (attrsArr[j] !== nattr) {
                         break;
+                    }
+
+                    var nalue = arguments[i + 1];
+                    if (isNew || attrsArr[j + 1] !== nalue) {
+                        attrsArr[j + 1] = nalue;
+                        attrsCache[nattr] = nalue;
+                        node.setAttribute(nattr, nalue);
                     }
                 }
 
-                // If we have looped to the end of the attribute pairs in arguments (implied
-                // by attrsChanged being false) but our known cached attrsArr is longer, then
-                // we'll need to setup newAttrs with the attributes for this pass. So send it
-                // down the attrsChanged path. If we didn't make it to the end, then this'll
-                // make no difference since attrsChanged is already true.
                 if (i < arguments.length || j < attrsArr.length) {
-                    var possibleRemovals = attrsArr.length > j + 1;
-                    var removals = false;
-                    i -= ~i & 1;
-                    j = j & ~1;
-
-                    for (; i < arguments.length; i += 2, j += 2) {
-                        var attr = arguments[i];
-                        var value = arguments[i + 1];
-                        var expectedAttr = attrsArr[j];
-
-                        if (attr === expectedAttr) {
-                            var expectedValue = attrsArr[j + 1];
-                            if (value === expectedValue) {
-                                continue;
-                            }
-                            node.setAttribute(attr, value);
-                        } else if (possibleRemovals) {
-                            removals = true;
-                            newAttrs[attr] = value;
-                            var malue = newAttrs[expectedAttr];
-                            if (malue === undefined || malue === sentinel) {
-                                newAttrs[expectedAttr] = undefined;
-                            }
-                        } else {
-                            node.setAttribute(attr, value);
-                        }
-
-                        attrsArr[j] = attr;
-                        attrsArr[j + 1] = value;
+                    for (; i < arguments.length; i += 1, j += 1) {
+                        attrsArr[j] = arguments[i];
                     }
 
                     if (j < attrsArr.length) {
-                        for (var k = j; k < attrsArr.length; k += 2) {
-                            var rattr = attrsArr[k];
-                            var ralue = newAttrs[rattr];
-                            if (ralue === undefined || ralue === sentinel) {
-                                newAttrs[rattr] = undefined;
-                            }
-                        }
-                        removals = true;
                         attrsArr.length = j;
                     }
 
-                    if (removals) {
-                        for (var nattr in newAttrs) {
-                            var nalue = newAttrs[nattr];
-                            if (nalue !== sentinel) {
-                                node.setAttribute(nattr, nalue);
-                                newAttrs[nattr] = sentinel;
-                            }
+                    for (i = 0; i < attrsArr.length; i += 2) {
+                        newAttrs[attrsArr[i]] = attrsArr[i + 1];
+                    }
+
+                    for (var attr in newAttrs) {
+                        var value = newAttrs[attr];
+                        if (attrsCache[attr] !== value) {
+                            node.setAttribute(attr, value);
+                            attrsCache[attr] = value;
+                            newAttrs[attr] = undefined;
                         }
                     }
                 }
@@ -193,7 +167,6 @@
                             setup: function() {
                                 node = document.createElement('div');
                                 attrsArr = [];
-                                attrsDiff = [];
                                 newAttrs = Object.create(null);
                                 attrsCache = Object.create(null);
                             }
@@ -595,6 +568,7 @@
                 var p = document.createElement('p');
                 p.appendChild(document.createTextNode('Done'));
                 document.body.appendChild(p);
+                scrollToBottom();
             });
 
         </script>
