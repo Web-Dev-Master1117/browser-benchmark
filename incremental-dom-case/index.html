@@ -1,0 +1,324 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t], {
+                            setup: function() {
+                            }
+                        });
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            var strings = [
+                'Abcdefghij',
+                'aBcdefghij',
+                'abCdefghij',
+                'abcDefghij',
+                'abcdEfghij',
+                'abcdeFghij',
+                'abcdefGhij',
+                'abcdefgHij',
+                'abcdefghIj',
+                'abcdefghiJ',
+            ];
+            var promise = Promise.resolve().then(function() {
+                var tests = {};
+
+                tests['maybe equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[j];
+                            t = a === b;
+                        }
+                    }
+                };
+
+                tests['toLowerCase insensitive equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[j];
+                            t = (a === b) || (a.toLowerCase() === b.toLowerCase());
+                        }
+                    }
+                };
+
+                tests['localeCompare insensitive equals'] = function() {
+                    var t = false;
+                    var opts = {usage: 'search', sensitivity: 'base'};
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[j];
+                            t = (a === b) || (a.localeCompare(b, undefined, opts));
+                        }
+                    }
+                };
+
+                tests['AND insensitive equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[j];
+                            if (a === b) {
+                                t = true;
+                            } else if (a.length === b.length) {
+                                t = true;
+                                for (var k = 0; k < a.length; k++) {
+                                    if ((a.charCodeAt(k) & 95) !== (b.charCodeAt(k) & 95)) {
+                                        t = false;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                t = false;
+                            }
+                        }
+                    }
+                };
+
+                tests['OR insensitive equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[j];
+                            if (a === b) {
+                                t = true;
+                            } else if (a.length === b.length) {
+                                t = true;
+                                for (var k = 0; k < a.length; k++) {
+                                    if ((a.charCodeAt(k) | 32) !== (b.charCodeAt(k) | 32)) {
+                                        t = false;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                t = false;
+                            }
+                        }
+                    }
+                };
+
+                tests['XOR insensitive equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[j];
+                            if (a === b) {
+                                t = true;
+                            } else if (a.length === b.length) {
+                                t = true;
+                                for (var k = 0; k < a.length; k++) {
+                                    if ((a.charCodeAt(k) | 32) !== (b.charCodeAt(k) | 32)) {
+                                        t = false;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                t = false;
+                            }
+                        }
+                    }
+                };
+
+                return test(tests);
+            }).then(function() {
+                var tests = {};
+
+                var others = [
+                    'a',
+                    'ab',
+                    'abc',
+                    'abcd',
+                    'abcde',
+                    'abcdef',
+                    'abcdefg',
+                    'abcdefgh',
+                    'abcdefghi',
+                    'abcdefghijk',
+                ];
+
+                tests['length not equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < others.length; j++) {
+                            var b = others[j];
+                            t = a === b;
+                        }
+                    }
+                };
+
+                tests['OR length not equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < others.length; j++) {
+                            var b = others[j];
+                            if (a === b) {
+                                t = true;
+                            } else if (a.length === b.length) {
+                                t = true;
+                                for (var k = 0; k < a.length; k++) {
+                                    if ((a.charCodeAt(k) | 32) !== (b.charCodeAt(k) | 32)) {
+                                        t = false;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                t = false;
+                            }
+                        }
+                    }
+                };
+
+                return test(tests);
+            }).then(function() {
+                var tests = {};
+
+                var others = [
+                    'bbcdefghij',
+                    'aacdefghij',
+                    'abadefghij',
+                    'abcaefghij',
+                    'abcdafghij',
+                    'abcdeaghij',
+                    'abcdefahij',
+                    'abcdefgaij',
+                    'abcdefghaj',
+                    'abcdefghia',
+                ];
+
+                tests['not equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < others.length; j++) {
+                            var b = others[j];
+                            t = a === b;
+                        }
+                    }
+                };
+
+                tests['OR not equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < others.length; j++) {
+                            var b = others[j];
+                            if (a === b) {
+                                t = true;
+                            } else if (a.length === b.length) {
+                                t = true;
+                                for (var k = 0; k < a.length; k++) {
+                                    if ((a.charCodeAt(k) | 32) !== (b.charCodeAt(k) | 32)) {
+                                        t = false;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                t = false;
+                            }
+                        }
+                    }
+                };
+
+                return test(tests);
+            }).then(function() {
+                var tests = {};
+
+                tests['equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[i];
+                            t = a === b;
+                        }
+                    }
+                };
+
+                tests['OR equals'] = function() {
+                    var t = false;
+                    for (var i = 0; i < strings.length; i++) {
+                        var a = strings[i];
+                        for (var j = 0; j < strings.length; j++) {
+                            var b = strings[i];
+                            if (a === b) {
+                                t = true;
+                            } else if (a.length === b.length) {
+                                t = true;
+                                for (var k = 0; k < a.length; k++) {
+                                    if ((a.charCodeAt(k) | 32) !== (b.charCodeAt(k) | 32)) {
+                                        t = false;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                t = false;
+                            }
+                        }
+                    }
+                };
+
+                return test(tests);
+            }).then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
