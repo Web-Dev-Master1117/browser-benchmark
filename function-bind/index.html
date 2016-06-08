@@ -1,0 +1,132 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    if (window.kill) {
+                        return resolve();
+                    }
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            var obj = {
+                none: function() {
+                    return 1;
+                },
+                param: function(a) {
+                    return a + 1;
+                },
+                uninlineable: function(a) {
+                    try {
+                        return a + 1;
+                    } catch(e) {};
+                }
+            };
+
+            var promise = Promise.resolve()
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                var bound = obj.none.bind(obj);
+                var closure = function() { return obj.none(); };
+
+                tests['bound (no params)'] = function() {
+                    bound();
+                };
+
+                tests['closure (no params)'] = function() {
+                    closure();
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                var bound = obj.param.bind(obj);
+                var closure = function(a) { return obj.param(a); };
+
+                tests['bound (params)'] = function() {
+                    bound(1);
+                };
+
+                tests['closure (params)'] = function() {
+                    closure(1);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                var bound = obj.uninlineable.bind(obj);
+                var closure = function(a) { return obj.uninlineable(a); };
+
+                tests['bound (un-inlineable)'] = function() {
+                    bound(1);
+                };
+
+                tests['closure (un-inlineable)'] = function() {
+                    closure(1);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
