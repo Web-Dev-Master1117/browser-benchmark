@@ -1,0 +1,187 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    if (window.kill) {
+                        return resolve();
+                    }
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            var attachedNone = document.createElement('div');
+            var detachedNone = document.createElement('div');
+            document.body.appendChild(attachedNone);
+            var attached = document.createElement('div');
+            var detached = document.createElement('div');
+            document.body.appendChild(attached);
+            for (var i = 0; i < 3; i++) {
+                attached.setAttribute('a' + i, i)
+                detached.setAttribute('a' + i, i)
+            }
+            var attachedLong = document.createElement('div');
+            var detachedLong = document.createElement('div');
+            document.body.appendChild(attachedLong);
+            for (i = 0; i < 10; i++) {
+                attachedLong.setAttribute('a' + i, i)
+                detachedLong.setAttribute('a' + i, i)
+            }
+
+            function loop(element) {
+                var obj = Object.create(null);
+                for (var i = 0; i < element.attributes.length; i++) {
+                    var attr = element.attributes[i];
+                    obj[attr.name] = attr.value;
+                }
+                return obj;
+            }
+            function loopCached(element) {
+                var obj = Object.create(null);
+                var attributes = element.attributes;
+                for (var i = 0; i < attributes.length; i++) {
+                    var attr = attributes[i];
+                    obj[attr.name] = attr.value;
+                }
+                return obj;
+            }
+
+            var promise = Promise.resolve()
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                tests['iterate (none, attached)'] = function() {
+                    loop(attachedNone);
+                };
+
+                tests['cached (none, attached)'] = function() {
+                    loopCached(attachedNone);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                tests['iterate (none, detached)'] = function() {
+                    loop(detachedNone);
+                };
+
+                tests['cached (none, detached)'] = function() {
+                    loopCached(detachedNone);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                tests['iterate (short, attached)'] = function() {
+                    loop(attached);
+                };
+
+                tests['cached (short, attached)'] = function() {
+                    loopCached(attached);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                tests['iterate (short, detached)'] = function() {
+                    loop(detached);
+                };
+
+                tests['cached (short, detached)'] = function() {
+                    loopCached(detached);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                tests['iterate (long, attached)'] = function() {
+                    loop(attachedLong);
+                };
+
+                tests['cached (long, attached)'] = function() {
+                    loopCached(attachedLong);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var tests = {};
+                var i = 0;
+
+                tests['iterate (long, detached)'] = function() {
+                    loop(detachedLong);
+                };
+
+                tests['cached (long, detached)'] = function() {
+                    loopCached(detachedLong);
+                };
+
+                return test(tests);
+            })
+            .then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
