@@ -1,0 +1,128 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../node_modules/lodash/lodash.js"></script>
+        <script src="../node_modules/platform/platform.js"></script>
+        <script src="../node_modules/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    if (window.kill) {
+                        return resolve();
+                    }
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            function truncate(array, length) {
+              array.length = length;
+            }
+
+            function truncatePop(array, length) {
+              while (array.length > length) {
+                array.pop();
+              }
+            }
+
+            function truncatePopCached(array, length) {
+              var times = array.length - length;
+              while (times--) {
+                array.pop();
+              }
+            }
+
+            function make(length) {
+              var array = Array(length);
+              for (var i = 0; i < length; i++) {
+                array[i] = i;
+              }
+              return array;
+            }
+
+            var promise = Promise.resolve()
+            var cases = [
+              {start: 6, end: 0},
+              {start: 6, end: 2},
+              {start: 6, end: 4},
+              {start: 20, end: 0},
+              {start: 20, end: 8},
+              {start: 20, end: 18},
+            ];
+            var ways = [
+              {name: 'length', fn: truncate},
+              {name: 'pop', fn: truncatePop},
+              {name: 'pop cached', fn: truncatePopCached},
+            ]
+            function runCase(kase) {
+              var tests = {};
+              var start = kase.start;
+              var end = kase.end;
+
+              for (var j = 0; j < ways.length; j++) {
+                var way = ways[j];
+                var name = way.name;
+                tests[start + ' -> ' + end + ' (' + name + ')'] = (function(fn) {
+                  return function() {
+                    fn(make(start), end);
+                  };
+                })(way.fn);
+              }
+
+              promise = promise.then(function() {
+                return test(tests);
+              });
+            }
+
+            for (var i = 0; i < cases.length; i++) {
+              runCase(cases[i]);
+            }
+            promise.then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
