@@ -1,0 +1,186 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../scripts/lodash/lodash.js"></script>
+        <script src="../scripts/platform/platform.js"></script>
+        <script src="../scripts/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+      <p>Starting...</p>
+        <script>
+
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    if (window.kill) {
+                        return resolve();
+                    }
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            function composeOld() {
+              for (var _len = arguments.length, funcs = Array(_len), _key = 0; _key < _len; _key++) {
+                funcs[_key] = arguments[_key];
+              }
+
+              var last = funcs[funcs.length - 1];
+              var rest = funcs.slice(0, -1);
+              return function () {
+                return rest.reduceRight(function (composed, f) {
+                  return f(composed);
+                }, last.apply(undefined, arguments));
+              };
+            }
+
+            function composeNew() {
+              for (var _len = arguments.length, funcs = Array(_len), _key = 0; _key < _len; _key++) {
+                funcs[_key] = arguments[_key];
+              }
+
+              return funcs.reduce(function (a, b) {
+                return function () {
+                  return a(b.apply(undefined, arguments));
+                };
+              });
+            }
+
+            function composeFor() {
+              for (var _len = arguments.length, funcs = Array(_len), _key = 0; _key < _len; _key++) {
+                funcs[_key] = arguments[_key];
+              }
+
+              var last = funcs[funcs.length - 1];
+              var rest = funcs.slice(0, -1);
+              return function () {
+                var composed = last.apply(undefined, arguments);
+                for (var i = rest.length - 1; i >= 0; i--) {
+                  var f = rest[i];
+                  composed = f(composed)
+                }
+                return composed;
+              };
+            }
+
+            function add1(x) {
+              return x + 1;
+            }
+            function addArgs() {
+              var sum = 0;
+              for (var i = 0; i < arguments.length; i++) {
+                sum += arguments[i];
+              }
+              return sum;
+            }
+
+            var promise = Promise.resolve()
+            var cases = [3, 6, 10, 20];
+            var ways = [
+              {name: 'old', compose: composeOld},
+              {name: 'new', compose: composeNew},
+              {name: 'for', compose: composeFor},
+            ];
+
+            function runCase(kase) {
+              var tests = {};
+
+              for (var j = 0; j < ways.length; j++) {
+                var way = ways[j];
+                runWay(kase, way, tests);
+              }
+
+              promise = promise.then(function() {
+                return test(tests);
+              });
+            }
+            function runWay(kase, way, tests) {
+              var name = way.name;
+              var compose = way.compose;
+              var fns = [];
+              for (var i = 0; i < kase - 1; i++) {
+                fns.push(add1);
+              }
+              fns.push(addArgs);
+              var fn = compose.apply(null, fns);
+              tests[kase + ' functions (' + name + ')'] = function() {
+                fn(1, 2, 3);
+              };
+            }
+
+            for (var i = 0; i < cases.length; i++) {
+              runCase(cases[i]);
+            }
+            function runCaseCreate(kase) {
+              var tests = {};
+
+              for (var j = 0; j < ways.length; j++) {
+                var way = ways[j];
+                runWayCreate(kase, way, tests);
+              }
+
+              promise = promise.then(function() {
+                return test(tests);
+              });
+            }
+            function runWayCreate(kase, way, tests) {
+              var name = way.name;
+              var compose = way.compose;
+              var fns = [];
+              for (var i = 0; i < kase - 1; i++) {
+                fns.push(add1);
+              }
+              fns.push(addArgs);
+              tests['startup with ' + kase + ' functions (' + name + ')'] = function() {
+                compose.apply(null, fns);
+              };
+            }
+            for (var i = 0; i < cases.length; i++) {
+              runCaseCreate(cases[i]);
+            }
+
+            promise.then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
