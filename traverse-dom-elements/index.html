@@ -1,0 +1,176 @@
+<html>
+    <head>
+        <title>Benchmark Boilerplate</title>
+        <script src="../scripts/lodash/lodash.js"></script>
+        <script src="../scripts/platform/platform.js"></script>
+        <script src="../scripts/benchmark/benchmark.js"></script>
+    </head>
+    <body>
+        <script>
+
+            function scrollToBottom() {
+                var top = document.body.scrollHeight - document.body.clientHeight;
+                if (top) {
+                    document.body.scrollTop = top;
+                }
+            }
+
+            function test(tests) {
+                return new Promise(function(resolve) {
+                    if (window.kill) {
+                        return resolve();
+                    }
+                    var suite = new Benchmark.Suite();
+                    for (var t in tests) {
+                        suite.add(t, tests[t]);
+                    }
+
+                    suite.on('cycle', function(event) {
+                        if (event.target.error) {
+                            return;
+                        }
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode(event.target));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('error', function(event) {
+                        var p = document.createElement('p');
+                        p.style.background = 'red';
+                        p.appendChild(document.createTextNode(event.target + ' ' + event.target.error));
+                        document.body.appendChild(p);
+                        scrollToBottom();
+                    })
+                    .on('complete', function() {
+                        var p = document.createElement('p');
+                        p.appendChild(document.createTextNode('Fastest is ' + this.filter('fastest').map('name')));
+                        document.body.appendChild(p);
+                        document.body.appendChild(document.createElement('hr'));
+
+                        scrollToBottom();
+                        resolve();
+                    })
+                    // run async
+                    .run({ 'async': true });
+                });
+            }
+
+            function treeWalker(root) {
+              var iterator = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
+
+              var store = [];
+              var currentNode;
+
+              while (currentNode = iterator.nextNode()) {
+                store.push(currentNode);
+              }
+              return store;
+            }
+            function nodeIterator(root) {
+              var iterator = document.createNodeIterator(root, NodeFilter.SHOW_ELEMENT, null);
+
+              var store = [];
+              var currentNode;
+
+              while (currentNode = iterator.nextNode()) {
+                store.push(currentNode);
+              }
+              return store;
+            }
+            function querySelectorAll(root) {
+              var childNodes = root.querySelectorAll("*");
+              var length = childNodes.length;
+
+              var store = [];
+              var currentNode;
+
+              for (var i = 0; i < length; i++) {
+                currentNode = childNodes[i];
+                store.push(currentNode);
+              }
+              return store;
+            }
+            var firstNext = (function() {
+              function traverse(root, store) {
+                var node = root.firstElementChild;
+
+                while (node) {
+                  store.push(node);
+                  traverse(node, store);
+                  node = node.nextElementSibling;
+                }
+                return store;
+              }
+              return function firstNext(root) {
+                return traverse(root, []);
+              }
+            }());
+
+            var fixed = document.createElement('div');
+            fixed.style.position = 'fixed';
+            fixed.style.top = 0;
+            fixed.style.overflow = 'hidden';
+            fixed.style.height = '1px';
+            document.body.appendChild(fixed);
+            function make(total) {
+              function insert(root, total) {
+                for (var i = 0; i < total; i++) {
+                  var div = document.createElement("div");
+                  div.textContent = i;
+                  insert(div, Math.floor(Math.random() * total));
+                  root.appendChild(div);
+                }
+              }
+
+              var div = document.createElement('div');
+              insert(div, total);
+              return div;
+            }
+
+            var promise = Promise.resolve()
+            var cases = [
+              {total: 7},
+              {total: 10},
+              {total: 13},
+              {total: 15},
+            ];
+            var ways = [
+              {name: 'treeWalker', fn: treeWalker},
+              {name: 'nodeIterator', fn: nodeIterator},
+              {name: 'querySelectorAll', fn: querySelectorAll},
+              {name: 'firstChild nextChild', fn: firstNext},
+            ]
+            function runCase(kase) {
+              var tests = {};
+              var tree = make(kase.total);
+              var total = treeWalker(tree).length;
+
+              for (var j = 0; j < ways.length; j++) {
+                var way = ways[j];
+                var name = way.name;
+                tests[name + ' (' + total + ' nodes)'] = (function(fn) {
+                  return function() {
+                    fixed.appendChild(tree);
+                    fn(tree);
+                    fixed.removeChild(tree);
+                  };
+                })(way.fn);
+              }
+
+              promise = promise.then(function() {
+                return test(tests);
+              });
+            }
+
+            for (var i = 0; i < cases.length; i++) {
+              runCase(cases[i]);
+            }
+            promise.then(function() {
+                var p = document.createElement('p');
+                p.appendChild(document.createTextNode('Done'));
+                document.body.appendChild(p);
+            });
+
+        </script>
+    </body>
+</html>
